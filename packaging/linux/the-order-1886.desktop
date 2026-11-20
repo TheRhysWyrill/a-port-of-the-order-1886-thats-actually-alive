@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=The Order: 1886
+GenericName=Game launcher
+Comment=Unofficial PC port of The Order: 1886: settings, prepared images and the Vulkan runtime
+Exec=AppRun
+Icon=the-order-1886
+Terminal=false
+Categories=Game;
+Keywords=order;1886;ps4;vulkan;

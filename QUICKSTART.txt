@@ -2,10 +2,15 @@ THE ORDER: 1886 FOR PC - QUICK START (LINUX)
 
 WHAT THIS DOWNLOAD INCLUDES
 
-"The Order 1886" (the launcher), "Play The Order 1886" (direct play), the
-launcher window in bin/order1886-launcher, the dedicated compatibility
-runtime and its libraries in bin, and license notices. This is unofficial,
-emulator-backed compatibility software, not an official PC port.
+Unofficial, emulator-backed compatibility software, not an official PC port.
+Two files carry it:
+
+- The-Order-1886-x86_64.AppImage: the launcher and the dedicated
+  compatibility runtime with its libraries, in one file. The launcher is
+  Tkinter and the image carries its own Python, so nothing has to be
+  installed to open its window.
+- order1886-linux-x86_64-*.tar.gz: the plain package, the same runtime with
+  "Play The Order 1886" for direct play.
 
 No game executable, game archives, firmware or player saves are included.
 Use your own extracted PS4 copy of The Order: 1886, in any edition:
@@ -14,51 +19,50 @@ CUSA00076 (tested), CUSA00035, CUSA00070, CUSA00100, CUSA00670 or CUSA00785
 
 REQUIREMENTS
 
-- x86-64 Linux with glibc 2.39 or newer and a Vulkan driver for your GPU.
-- The launcher window needs WebKitGTK 4.1 (libwebkit2gtk-4.1.so.0), for
-  example the webkit2gtk-4.1 package on Arch or libwebkit2gtk-4.1-0 on
-  Debian and Ubuntu. Playing does not need it.
-- Extract the complete archive to a writable folder. Keep both entry points
-  and bin together.
+- x86-64 Linux with glibc 2.39 or newer (SteamOS 3.6+, Ubuntu 24.04+, Debian
+  13, Fedora 40+, Arch) and a Vulkan driver for your GPU.
+- Nothing to install for the settings window: no WebKitGTK, no GTK and no
+  Python of your own. The launcher is Tkinter running on the image's Python.
+- AppImage: make it executable once, chmod +x The-Order-1886-x86_64.AppImage
+  (Desktop Mode: right-click > Properties > Permissions > Executable).
+- Plain package: extract the complete archive to a writable folder and keep
+  both entry points and bin together.
 
 YOUR GAME FOLDER
 
 Choose the folder that directly contains eboot.bin, archivemap.bin, _data,
 sce_sys and sce_module (any folder name). The original files are only read.
 
-WITH WEBKITGTK 4.1
+STARTING THE LAUNCHER (APPIMAGE)
 
-Start "The Order 1886", choose your game folder on Game & Content, then press
-Play. "Play The Order 1886" later starts the game directly with the saved
-settings.
+Start the AppImage. The window opens on Home; on Game & Content choose your
+game folder, then press Play. Every page and setting comes from the runtime's
+own catalogue (Display, Graphics, Performance, Controls, Game & Content,
+Achievements, System), and each change is saved as you make it. Settings keep
+their defaults (30 FPS) until you change them.
 
-WITHOUT WEBKITGTK 4.1 (STEAMOS / STEAM DECK)
+WITHOUT THE WINDOW (STEAM, GAME MODE, A SECOND SHORTCUT)
 
-SteamOS does not include WebKitGTK and replaces its system files on every
-update, so the launcher window cannot open there. The game still plays:
+  ./The-Order-1886-x86_64.AppImage --direct-play
 
-1. Put your game folder next to the extracted "The Order 1886" folder, or
-   note its full path.
-2. In Steam (Desktop Mode): Games > Add a Non-Steam Game, browse to
-   "Play The Order 1886" and add it.
-3. If the game folder is not next to the package, open the entry's
-   Properties and set the launch options to:
-     --game-dir "/home/deck/Games/CUSA00076"
-   with your own path. It is checked and saved on the first start, so you
-   can remove it afterwards.
-4. Start it from Steam, in Game Mode or Desktop Mode.
+starts the game with the saved settings. Add --game-dir the first time and the
+folder is checked and saved, so later starts need only --direct-play:
 
-Settings keep their defaults (30 FPS) until you change them in the launcher
-window, for example on another PC with the same "user" folder. While playing,
-F10 cycles the frame rate live: 60, 90, 120, back to 30 (rates above 60 need
-a display that refreshes that fast, or VSync off). Starting
-"The Order 1886" without WebKitGTK shows what is missing and then plays the
-saved settings. The message is also written to
-user/order1886/logs/launcher-entry.log.
+  ./The-Order-1886-x86_64.AppImage --direct-play --game-dir "/path/to/CUSA00035"
 
-To get the launcher window on SteamOS anyway, install WebKitGTK through
-Homebrew and expose only its two libraries; see issue #114 on GitHub for the
-exact commands.
+In Steam (Desktop Mode): Games > Add a Non-Steam Game, browse to the AppImage,
+then put --direct-play in the entry's launch options. Start it from Steam in
+Game Mode or Desktop Mode. --help lists the options. The plain package does
+the same with "Play The Order 1886", which takes --game-dir too.
+
+WHERE SETTINGS LIVE
+
+Settings, prepared images, logs, caches and saves are kept in user/order1886
+beside the launcher: next to the AppImage, or in ~/.local/share/order1886 when
+that folder cannot be written. ORDER1886_STATE chooses the folder yourself, a
+good place for it being Steam's launch options. While playing, F10 cycles the
+frame rate live: 60, 90, 120, back to 30 (rates above 60 need a display that
+refreshes that fast, or VSync off).
 
 FSR 4 (THIS INSTALLATION)
 
@@ -148,5 +152,6 @@ setups and is harmless elsewhere.
 
 UPDATING
 
-Extract the new archive and copy your "user" folder from the old one into
-it. It holds settings, saves and logs.
+Replace the AppImage with the new one: the user folder beside it stays, and
+it holds settings, saves and logs. For the plain package, extract the new
+archive and copy your "user" folder from the old one into it.

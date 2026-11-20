@@ -1,0 +1,131 @@
+name: Linux AppImage
+
+# Wraps a released Linux package (the tar.gz the release process already publishes) into an
+# AppImage with the Tkinter launcher and its own Python: no WebKitGTK, nothing to install.
+# Built on Ubuntu 24.04, so it starts on glibc 2.39 or newer (SteamOS 3.6+, Bazzite/Fedora 40+,
+# Debian 13, Ubuntu 24.04+). Every push keeps the image as an artifact after it has been opened
+# on those distributions in containers (packaging/linux/smoke-test.sh); a tag linux-v* publishes it.
+#   Actions > Linux AppImage > Run workflow builds it by hand, from another release when asked.
+on:
+  push:
+    branches: [main]
+    tags: ['linux-v*']
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      source_repo:
+        description: 'Repository whose releases hold the Linux package'
+        default: 'DivinusX/a-port-of-the-order-1886-thats-actually-alive'
+      release:
+        description: 'Release tag to package (empty: its latest release)'
+        default: ''
+      tarball:
+        description: 'Direct URL of a package tar.gz (empty: from the release above)'
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: linux-appimage-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Dependencies
+        run: bash packaging/linux/ci-deps.sh
+
+      - name: Fetch the released Linux package
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SOURCE_REPO: ${{ github.event.inputs.source_repo || 'DivinusX/a-port-of-the-order-1886-thats-actually-alive' }}
+          RELEASE: ${{ github.event.inputs.release }}
+          TARBALL: ${{ github.event.inputs.tarball }}
+        run: |
+          set -euo pipefail
+          mkdir -p out/download out/pkg
+          # gh uses the workflow token: the anonymous API is rate-limited to 60 requests an hour
+          # per address and answers 403 on a shared runner, which is not a missing release.
+          if [ -n "${TARBALL:-}" ]; then
+            curl -fL --retry 3 --retry-delay 2 -o out/download/package.tar.gz "$TARBALL"
+          elif [ -n "${RELEASE:-}" ]; then
+            gh release download "$RELEASE" -R "$SOURCE_REPO" -p '*linux-x86_64*.tar.gz' -D out/download
+          else
+            gh release download -R "$SOURCE_REPO" -p '*linux-x86_64*.tar.gz' -D out/download
+          fi
+          tar -xzf out/download/*.tar.gz -C out/pkg
+          tree=$(dirname "$(find out/pkg -name package-manifest.json -print -quit)")
+          [ -n "$tree" ] || { echo 'the archive has no package-manifest.json' >&2; exit 1; }
+          echo "TREE=$tree" >> "$GITHUB_ENV"
+          ls -lh out/download
+          python3 - "$tree" <<'EOF'
+          import json, sys
+          manifest = json.load(open(sys.argv[1] + '/package-manifest.json', encoding='utf-8'))
+          print('package', manifest.get('product'), 'built', manifest.get('built_utc'),
+                'files', len(manifest.get('files') or []))
+          EOF
+
+      - name: AppImage
+        run: |
+          set -euo pipefail
+          bash packaging/linux/appimage.sh --tree "$TREE" --out dist
+          ls -lh dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: The-Order-1886-x86_64.AppImage
+          path: dist/The-Order-1886-x86_64.AppImage*
+          if-no-files-found: error
+
+  smoke:
+    needs: build
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        # debian:13 has SteamOS 3.6's glibc (2.41), fedora:42 is Bazzite's base.
+        image: ['ubuntu:24.04', 'debian:13', 'fedora:42', 'archlinux:latest', 'opensuse/tumbleweed:latest']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: The-Order-1886-x86_64.AppImage
+          path: dist
+      - name: Open the launcher on ${{ matrix.image }}
+        run: |
+          chmod +x dist/The-Order-1886-x86_64.AppImage
+          docker run --rm -v "$PWD:/w:ro" "${{ matrix.image }}" \
+            bash /w/packaging/linux/smoke-test.sh /w/dist/The-Order-1886-x86_64.AppImage
+
+  release:
+    needs: smoke
+    if: startsWith(github.ref, 'refs/tags/linux-v')
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: The-Order-1886-x86_64.AppImage
+          path: dist
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/The-Order-1886-x86_64.AppImage
+            dist/The-Order-1886-x86_64.AppImage.sha256
+          body: |
+            **The Order: 1886 AppImage** with the Tkinter launcher: no WebKitGTK, no Python and
+            nothing else to install. No game files are included: you need your own copy.
+
+            1. Download `The-Order-1886-x86_64.AppImage` and make it executable (`chmod +x`).
+            2. Run it: the launcher opens. On **Game & Content** choose your folder with
+               `CUSA00035`, then press **PLAY**.
+            3. Steam Deck / Game Mode: add it as a non-Steam game with `--direct-play` as the
+               launch option, so the game starts without the launcher window.
+
+            Needs x86-64 Linux with glibc 2.39+ (SteamOS 3.6+, Ubuntu 24.04+, Debian 13,
+            Fedora 40+, Arch) and a Vulkan 1.3 GPU.

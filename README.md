@@ -115,23 +115,28 @@ Every release has a full write-up in [CHANGES.md](CHANGES.md), with evidence in
 
 ## Getting started
 
-1. **Download** the latest `order1886-linux-x86_64-*.tar.gz` from
+1. **Download** `The-Order-1886-x86_64.AppImage` from
    [Releases](https://github.com/DivinusX/a-port-of-the-order-1886-thats-actually-alive/releases/latest)
-   and check it against the `.sha256` file.
-2. **Extract** the whole archive to a writable folder. Keep the entry points and `bin/` together.
-3. **Run** `The Order 1886` and pick your game folder on **Game & Content**. Pick the folder
-   that directly contains `eboot.bin`, `archivemap.bin`, `_data`, `sce_sys` and `sce_module`.
+   and check it against the `.sha256` file. The plain `order1886-linux-x86_64-*.tar.gz` package
+   is still there for direct play.
+2. **Make it executable:** `chmod +x The-Order-1886-x86_64.AppImage` (or right-click ->
+   Properties -> Permissions -> Executable). Plain package: extract the whole archive to a
+   writable folder and keep the entry points and `bin/` together.
+3. **Run it** and pick your game folder on **Game & Content**. Pick the folder that directly
+   contains `eboot.bin`, `archivemap.bin`, `_data`, `sce_sys` and `sce_module`.
 4. Choose your settings (I play with Borderless + FSR 4 + 60 FPS + bars off) and press **Play**.
+5. **Steam Deck / Game Mode:** add the AppImage as a non-Steam game and put `--direct-play` in
+   its launch options; the game starts with the saved settings and no window.
 
-**Requirements:** x86-64 Linux, glibc 2.39+, a Vulkan GPU driver. The launcher window needs
-WebKitGTK 4.1. Without it (for example on SteamOS), use
-`Play The Order 1886 --game-dir /path/to/game` to play directly.
+**Requirements:** x86-64 Linux, glibc 2.39+ (SteamOS 3.6+, Ubuntu 24.04+, Debian 13, Fedora
+40+, Arch), a Vulkan GPU driver. Nothing to install for the launcher: it is Tkinter and the
+image carries its own Python, so no WebKitGTK, no GTK and no system Python.
 
 **Supported editions:** update 1.02 of CUSA00076, CUSA00035, CUSA00070, CUSA00100, CUSA00670
 and CUSA00785. CUSA00035 is the one I play on.
 
-Settings, caches, logs and saves live in `user/order1886` next to the launcher. Keep that folder
-when you upgrade.
+Settings, caches, logs and saves live in `user/order1886` next to the launcher (beside the AppImage,
+else `~/.local/share/order1886`; `ORDER1886_STATE` overrides both). Keep that folder when you upgrade.
 
 **Shader cache seeds (#17):** the runtime records the pipelines it compiles and replays them at
 boot. If someone gives you a captured cache, put it at `shader-cache/CUSAxxxxx/` (a

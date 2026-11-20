@@ -1,0 +1,74 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Entry point of The Order: 1886 AppImage.
+#
+#   ./The-Order-1886-x86_64.AppImage                     the launcher
+#   ./The-Order-1886-x86_64.AppImage --direct-play       play with the saved settings, no window
+#   ./The-Order-1886-x86_64.AppImage --game-dir DIR      use this game folder (with --direct-play)
+#   ./The-Order-1886-x86_64.AppImage --help
+#
+# The launcher is Tkinter, run by the Python the image carries, and it talks to the worker the
+# package already ships. There is no WebKitGTK anywhere: nothing has to be installed for the
+# window to open.
+#
+# Data (settings, prepared images, logs, caches, saves) goes to, in this order:
+#   $ORDER1886_STATE, when set (Steam launch options, a folder on another disk);
+#   "user/" beside the AppImage, when that folder can be written (a portable copy);
+#   $XDG_DATA_HOME/order1886 (~/.local/share/order1886).
+set -e
+
+if [ -n "${APPDIR:-}" ]; then
+    APPDIR=$APPDIR
+else
+    APPDIR=$(dirname -- "$(readlink -f -- "$0")")
+fi
+export APPDIR
+ROOT=$APPDIR/usr/order1886
+PYTHON=$APPDIR/usr/python/bin/python3
+
+case ${1:-} in
+    --help|-h)
+        cat <<'EOF'
+The Order: 1886 AppImage
+  (no arguments)   the launcher
+  --direct-play    play with the saved settings, no window (Steam, Game Mode)
+  --game-dir DIR   use this game folder (with --direct-play)
+  --help           this text
+
+Data (settings, prepared images, logs, caches, saves) goes to $ORDER1886_STATE when set, else
+the user/ folder beside the AppImage when that can be written, else ~/.local/share/order1886.
+EOF
+        exit 0 ;;
+esac
+
+# glibc comes from the host: say so plainly instead of a loader error.
+want=$(cat "$APPDIR/usr/lib/compat/glibc" 2>/dev/null || echo 2.17)
+have=$(getconf GNU_LIBC_VERSION 2>/dev/null | awk '{print $2}')
+if [ -n "$have" ] && [ "$(printf '%s\n%s\n' "$want" "$have" | sort -V | head -1)" != "$want" ]; then
+    message="This Order 1886 AppImage needs glibc $want or newer; this system has $have.
+Use a newer distribution (Ubuntu 24.04+, Fedora 39+, SteamOS 3.6+, Debian 13, Arch)."
+    echo "$message" >&2
+    command -v zenity >/dev/null 2>&1 && zenity --error --title='The Order: 1886' --text="$message" 2>/dev/null
+    command -v kdialog >/dev/null 2>&1 && kdialog --title 'The Order: 1886' --error "$message" 2>/dev/null
+    exit 1
+fi
+
+state=${ORDER1886_STATE:-}
+if [ -z "$state" ]; then
+    if [ -n "${APPIMAGE:-}" ]; then base=$APPIMAGE; else base=$APPDIR; fi
+    beside=$(dirname -- "$base")
+    if [ -w "$beside" ]; then
+        state=$beside/user/order1886
+    else
+        state=${XDG_DATA_HOME:-$HOME/.local/share}/order1886
+    fi
+fi
+mkdir -p -- "$state" 2>/dev/null || true
+
+# The image's Python only: a host PYTHONHOME/PYTHONPATH would load the wrong standard library.
+unset PYTHONHOME PYTHONPATH PYTHONSTARTUP
+export PYTHONNOUSERSITE=1 PYTHONDONTWRITEBYTECODE=1 PYTHONUTF8=1
+
+cd "$ROOT"
+exec "$PYTHON" -I "$ROOT/launcher/order1886_launcher.py" \
+    --project-root "$ROOT" --state-dir "$state" "$@"
